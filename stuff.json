@@ -1,0 +1,163 @@
+[
+    {
+        "ID": 1,
+        "Name": "Tesla",
+        "Description": "Model_S",
+        "Price": 15000,
+        "Sales Price": 15000,
+        "Features":["electric", "sedan", "orange"]
+    },
+    {
+        "ID": 2,
+        "Name": "Toyota",
+        "Description": "Camry",
+        "Price": 8000,
+        "Sales Price": 7000,
+        "Features":["gasoline", "sedan", "siver"]
+    },
+    {
+        "ID": 3,
+        "Name": "Honda",
+        "Description": "Accord",
+        "Price": 8500,
+        "Sales Price": 7000,
+        "Features":["gasoline", "sedan", "black"]
+    },
+    {
+        "ID": 4,
+        "Name": "Huyndai",
+        "Description": "Sonata",
+        "Price": 9000,
+        "Sales Price": 8000,
+        "Features":["hybrid", "sedan", "blue"]
+    },
+    {
+        "ID": 5,
+        "Name": "Mazda",
+        "Description": "Mazda6",
+        "Price": 7500,
+        "Sales Price": 6500,
+        "Features":["diesel", "sedan", "grey"]
+    },
+    {
+        "ID": 6,
+        "Name": "BMW",
+        "Description": "530d",
+        "Price": 14000,
+        "Sales Price": 12500,
+        "Features":["diesel", "sedan", "white"]
+    },
+    {
+        "ID": 7,
+        "Name": "VW",
+        "Description": "Passat",
+        "Price": 9000,
+        "Sales Price": 8500,
+        "Features":["diesel", "sedan", "green"]
+    },
+    {
+        "ID": 8,
+        "Name": "Chevrolet",
+        "Description": "Bolt",
+        "Price": 14500,
+        "Sales Price": 14000,
+        "Features":["electric", "sedan", "red"]
+    },
+    {
+        "ID": 9,
+        "Name": "Tesla",
+        "Description": "Model_X",
+        "Price": 19500,
+        "Sales Price": 19500,
+        "Features":["electric", "SUV", "black"]
+    },
+    {
+        "ID": 10,
+        "Name": "Audi",
+        "Description": "Q7",
+        "Price": 19000,
+        "Sales Price": 18000,
+        "Features":["gasoline", "SUV", "yellow"]
+    },
+    {
+        "ID": 11,
+        "Name": "Mercedes",
+        "Description": "ML350",
+        "Price": 18500,
+        "Sales Price": 18000,
+        "Features":["gasoline", "SUV", "metalic"]
+    },
+    {
+        "ID": 12,
+        "Name": "VW",
+        "Description": "Toureg",
+        "Price": 17500,
+        "Sales Price": 16500,
+        "Features":["diesel", "SUV", "grey"]
+    },
+    {
+        "ID": 13,
+        "Name": "Toyota",
+        "Description": "Highlander",
+        "Price": 18000,
+        "Sales Price": 17500,
+        "Features":["hybrid", "SUV", "brown"]
+    },
+    {
+        "ID": 14,
+        "Name": "Mazda",
+        "Description": "CX-9",
+        "Price": 17500,
+        "Sales Price": 17000,
+        "Features":["hybrid", "SUV", "grey"]
+    },
+    {
+        "ID": 15,
+        "Name": "Honda",
+        "Description": "Odyssey",
+        "Price": 14500,
+        "Sales Price": 13000,
+        "Features":["hybrid", "minivan", "blue"]
+    },
+    {
+        "ID": 16,
+        "Name": "Dodge",
+        "Description": "Caravan",
+        "Price": 12500,
+        "Sales Price": 11000,
+        "Features":["diesel", "minivan", "white"]
+    },
+    {
+        "ID": 17,
+        "Name": "Chevrolet",
+        "Description": "Silverado",
+        "Price": 15500,
+        "Sales Price": 14000,
+        "Features":["diesel", "pickup", "orange"]
+    },
+    {
+        "ID": 18,
+        "Name": "Ford",
+        "Description": "F150",
+        "Price": 15000,
+        "Sales Price": 13000,
+        "Features":["hybrid", "pickup", "silver"]
+    },
+    {
+        "ID": 19,
+        "Name": "Dodge",
+        "Description": "RAM",
+        "Price": 14000,
+        "Sales Price": 13000,
+        "Features":["diesel", "pickup", "black"]
+    },
+    {
+        "ID": 20,
+        "Name": "Chevrolet",
+        "Description": "Avalanche",
+        "Price": 12000,
+        "Sales Price": 11000,
+        "Features":["gasoline", "pickup", "white"]
+    }
+]
+

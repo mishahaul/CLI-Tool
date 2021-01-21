@@ -5,7 +5,9 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"strconv"
+	// "termbox"
 	// "errors"
 	// "strings"
 )
@@ -21,7 +23,9 @@ type Product struct {		//initializing a struct which will hold products
 
 var products []Product
 
+
 func MainMenu() {
+	cmdClear()
 	for {
 		var option int
 		fmt.Println("Main menu:")
@@ -40,7 +44,6 @@ func MainMenu() {
 
 		if option < 1 || option > 3 {
 			fmt.Println(`Enter "1" to Show Products, press "2" to Filter them or "3" to Exit`)
-			// MainMenu()
 		}
 		
 	
@@ -57,10 +60,12 @@ func MainMenu() {
 			// 	fmt.Println(`Enter "1" to Show Products, 
 			// 	press "2" to Filter them or "3" to Exit`)
 		}
+
 	}
 }
 
 func ShowProductsMenu(p []Product) {
+	cmdClear()
 	i := 0
 
 	for {
@@ -80,12 +85,14 @@ func ShowProductsMenu(p []Product) {
 				EditProductMenu(&p[i])
 			case 2:  
 				fmt.Println("Next")
+				cmdClear()
 				i++
 				if i == len(p) {
 					i = 0
 				}
 			case 3:  
 				fmt.Println("Previous")
+				cmdClear()
 				i--
 				if i == -1 {
 					i = len(p) - 1
@@ -99,6 +106,7 @@ func ShowProductsMenu(p []Product) {
 }
 
 func EditProductMenu(p *Product) {
+	cmdClear()
 	for {
 		var option int
 		fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\n%s\n", p.ID, p.Name, 
@@ -134,7 +142,7 @@ func EditProductMenu(p *Product) {
 }
 
 func FilterProductMenu(p []Product) {
-	
+	cmdClear()
 	for {
 		var option int
 		fmt.Println("Choose field to filter by:")
@@ -148,17 +156,8 @@ func FilterProductMenu(p []Product) {
 		fmt.Scan(&option)
 		switch option {
 			case 1: 
-				var userInput string
-				fmt.Println("Which Name to filter by?")
-				fmt.Scan(&userInput)
-				for i, val := range p {
-					if userInput == val.Name {
-						fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\n%s\n", p[i].ID, p[i].Name, 
-						p[i].Description, p[i].Price, p[i].SalesPrice, p[i].Features)
-					} else if userInput != val.Name && i == len(p) - 1 {
-						fmt.Printf("We don't have any item matching %v\n", userInput)
-					}
-				}
+				fmt.Println("NAme")
+				filterbyName(p)
 			case 2:  
 				fmt.Println("Price")
 				filterByPrice(p)
@@ -174,6 +173,20 @@ func FilterProductMenu(p []Product) {
 				MainMenu()
 			default:
 				fmt.Println("Press one of available options!")
+		}
+	}
+}
+func filterbyName(p []Product) {
+	var userInput string
+	fmt.Println("Which Name to filter by?")
+	fmt.Scan(&userInput)
+				
+ 	for i, val := range p {
+		if userInput == val.Name {
+			fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\n%s\n", p[i].ID, p[i].Name, 
+				p[i].Description, p[i].Price, p[i].SalesPrice, p[i].Features)
+		} else if userInput != val.Name && i == len(p) - 1 {
+			fmt.Printf("We don't have any item matching %v\n", userInput)
 		}
 	}
 }
@@ -224,9 +237,18 @@ func filterByPrice(p []Product) {
 	}
 }
 
+func cmdClear() {
+	cmd := exec.Command("cmd", "/c", "cls")
+    cmd.Stdout = os.Stdout
+	cmd.Run()
+}
+
 func main() {
 	content, err := ioutil.ReadFile("stuff.json") // read json file
-	
+	cmd := exec.Command("cmd", "/c", "cls")
+	cmd.Stdout = os.Stdout
+	fmt.Printf("%T\n", cmd)
+
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -236,7 +258,7 @@ func main() {
 	if err2 != nil {
 		fmt.Println(err2.Error())
 	}
-
+	cmdClear()
 	MainMenu()
-
+	
 }

@@ -1,24 +1,32 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
+
+	"./dbConnection"
+
+	_ "github.com/lib/pq"
 )
 
-type Product struct { 						//initializing a struct which will hold products
+type Product struct { //initializing a struct which will hold products
 	ID          int      `json:"ID"`
 	Name        string   `json:"Name"`
 	Description string   `json:"Description"`
 	Price       int      `json:"Price"`
-	SalesPrice  int      `json:"Sales Price"`
+	SalesPrice  int      `json:"SalesPrice"`
 	Features    []string `json:"Features"`
 }
 
 var products []Product
+
+var db *sql.DB
 
 func MainMenu() {
 	cmdClear()
@@ -62,7 +70,7 @@ func ShowProductsMenu(p []Product) {
 		fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\nFeatures is %s\n\n", p[i].ID, p[i].Name,
 			p[i].Description, p[i].Price, p[i].SalesPrice, p[i].Features)
 		printSPMenu()
-	
+
 		_, err := fmt.Scan(&option)
 		if err != nil {
 			fmt.Println(err)
@@ -149,16 +157,18 @@ func printEPMenu() {
 func FilterProductMenu(p []Product) {
 	cmdClear()
 	for {
-		var option int
+		var option string
 		printFPMenu()
 		_, err := fmt.Scan(&option)
+		intOpt, err := strconv.Atoi(option)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Println("Nunbers only")
+			continue
 		}
-		switch option {
+		switch intOpt {
 		case 1:
 			cmdClear()
-			fmt.Println("NAme")
+			fmt.Println("Name")
 			filterByName(p)
 		case 2:
 			cmdClear()
@@ -187,7 +197,7 @@ func filterByName(p []Product) {
 	for i, val := range p {
 		if userInput == val.Name {
 			fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\nFeatures is %s\n\n", p[i].ID, p[i].Name,
-			p[i].Description, p[i].Price, p[i].SalesPrice, p[i].Features)
+				p[i].Description, p[i].Price, p[i].SalesPrice, p[i].Features)
 		} else if userInput != val.Name && i == len(p)-1 {
 			fmt.Printf("We don't have any item matching %v\n", userInput)
 		}
@@ -213,7 +223,10 @@ func filterByPrice(p []Product) {
 			fmt.Println("Nunbers only")
 			continue
 		}
-
+		if max < min {
+			fmt.Println("Maximum item price have to be greater, than minimum price")
+			continue
+		}
 		for i, val := range p {
 			if min <= val.Price && val.Price <= max {
 				fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\n%s\n", p[i].ID, p[i].Name,
@@ -230,17 +243,110 @@ func cmdClear() {
 	cmd.Run()
 }
 
+func insertProduct(p []Product) error {
+	stmt, err := db.Prepare("INSERT INTO products (product_id, name, description, price, sales_price) VALUES ($1, $2, $3, $4, $5)")
+	if err != nil {
+		log.Fatalf("Prepared statement failed: %v", err)
+	}
+	defer stmt.Close() // Prepared statements take up server resources and should be closed after use.
+
+	for _, value := range p {
+		if _, err := stmt.Exec(value.ID, value.Name, value.Description, value.Price, value.SalesPrice); err != nil {
+			log.Fatalf("Executing statment failed: %v", err)
+		}
+		// fmt.Println("Your shit uploaded correctly!!!")
+	}
+	return err
+}
+
+func insertFeature(featureMap map[string]int) error {
+	stmt, err := db.Prepare("INSERT INTO features (value, feature_id) VALUES ($1, $2)")
+	if err != nil {
+		log.Fatalf("Prepared statement failed: %v", err)
+	}
+	defer stmt.Close() // Prepared statements take up server resources and should be closed after use.
+
+	for value, id := range featureMap {
+		if _, err := stmt.Exec(value, id); err != nil {
+			log.Fatalf("Executing statment failed: %v", err)
+		}
+		// fmt.Println("Your shit uploaded correctly!!!")
+	}
+	return err
+}
+
+func insertPF(p []Product, featureMap map[string]int) error {
+	stmt, err := db.Prepare("INSERT INTO product_feature (product_id, feature_id) VALUES ($1, $2)")
+	if err != nil {
+		log.Fatalf("Prepared statement failed: %v", err)
+	}
+	defer stmt.Close() // Prepared statements take up server resources and should be closed after use.
+
+	for _, val := range p {
+		for _, feature := range val.Features {
+			for value, id := range featureMap {
+				if feature == value {
+					if _, err := stmt.Exec(val.ID, id); err != nil {
+						log.Fatalf("Executing statment failed: %v", err)
+					}
+				}
+			}
+		// fmt.Println("Your shit uploaded correctly!!!")
+		}
+	}
+	return err
+}
+
+func uniqueFeature(p []Product) map[string]int {
+	f := make(map[string]int)
+	id := 1
+	for _, ft := range p {
+		for _, val := range ft.Features {
+			if _, ok := f[val]; ok {
+				continue
+			} else {
+				f[val] = id
+				id++
+			}
+		}
+	}
+	return f
+}
+
 func main() {
 	content, err := ioutil.ReadFile("stuff.json") // read json file
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
-	
+
 	err = json.Unmarshal(content, &products) // unmarshal decoded json into products
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
-	MainMenu()
+
+	// fmt.Println(products)
+
+	// MainMenu()
+
+	dbSettings := dbConnection.Settings{
+		User: "postgres",
+		Pass: "Logvynets1",
+		Name: "postgres",
+		Host: "localhost",
+		Port: "5432",
+	}
+
+	db, err = dbConnection.Connect(dbSettings)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// insertProduct(products)
+	f := uniqueFeature(products)
+	fmt.Printf("%v\n", f)
+	// insertFeature(f)
+	insertPF(products, f)
+	// fmt.Printf("%v", f)
+
 }

@@ -244,7 +244,16 @@ func cmdClear() {
 }
 
 func insertProduct(p []Product) error {
-	stmt, err := db.Prepare("INSERT INTO products (product_id, name, description, price, sales_price) VALUES ($1, $2, $3, $4, $5)")
+	stmt, err := db.Prepare("TRUNCATE TABLE products CASCADE")
+	if err != nil {
+		log.Fatalf("truncate failed: %v", err)
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(); err != nil {
+		log.Fatalf("truncate statment failed: %v", err)
+	}
+
+	stmt, err = db.Prepare("INSERT INTO products (product_id, name, description, price, sales_price) VALUES ($1, $2, $3, $4, $5)")
 	if err != nil {
 		log.Fatalf("Prepared statement failed: %v", err)
 	}
@@ -260,7 +269,16 @@ func insertProduct(p []Product) error {
 }
 
 func insertFeature(featureMap map[string]int) error {
-	stmt, err := db.Prepare("INSERT INTO features (value, feature_id) VALUES ($1, $2)")
+	stmt, err := db.Prepare("TRUNCATE TABLE features CASCADE")
+	if err != nil {
+		log.Fatalf("truncate failed: %v", err)
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(); err != nil {
+		log.Fatalf("truncate statment failed: %v", err)
+	}
+
+	stmt, err = db.Prepare("INSERT INTO features (value, feature_id) VALUES ($1, $2)")
 	if err != nil {
 		log.Fatalf("Prepared statement failed: %v", err)
 	}
@@ -276,7 +294,16 @@ func insertFeature(featureMap map[string]int) error {
 }
 
 func insertPF(p []Product, featureMap map[string]int) error {
-	stmt, err := db.Prepare("INSERT INTO product_feature (product_id, feature_id) VALUES ($1, $2)")
+	stmt, err := db.Prepare("TRUNCATE TABLE product_feature")
+	if err != nil {
+		log.Fatalf("truncate failed: %v", err)
+	}
+	defer stmt.Close()
+	if _, err := stmt.Exec(); err != nil {
+		log.Fatalf("truncate statment failed: %v", err)
+	}
+
+	stmt, err = db.Prepare("INSERT INTO product_feature (product_id, feature_id) VALUES ($1, $2)")
 	if err != nil {
 		log.Fatalf("Prepared statement failed: %v", err)
 	}
@@ -342,10 +369,10 @@ func main() {
 	}
 	defer db.Close()
 
-	// insertProduct(products)
+	insertProduct(products)
 	f := uniqueFeature(products)
-	fmt.Printf("%v\n", f)
-	// insertFeature(f)
+	// fmt.Printf("%v\n", f)
+	insertFeature(f)
 	insertPF(products, f)
 	// fmt.Printf("%v", f)
 

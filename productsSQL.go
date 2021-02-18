@@ -15,6 +15,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+var db *sql.DB
+
 type Product struct { //initializing a struct which will hold products
 	ID          int      `json:"ID"`
 	Name        string   `json:"Name"`
@@ -24,9 +26,20 @@ type Product struct { //initializing a struct which will hold products
 	Features    []string `json:"Features"`
 }
 
-var products []Product
+// var products []Product
 
-var db *sql.DB
+func readJSON(filename string) {
+	var products []Product
+	content, err := ioutil.ReadFile(filename) // read json file
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = json.Unmarshal(content, &products) // unmarshal decoded json into products
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func MainMenu() {
 	cmdClear()
@@ -42,9 +55,9 @@ func MainMenu() {
 		}
 		switch option {
 		case 1:
-			ShowProductsMenu(products)
+			ShowProductsMenu()
 		case 2:
-			FilterProductsMenu(products)
+			FilterProductsMenu()
 			fmt.Println("Filter Product Menu: ")
 		case 3:
 			os.Exit(0)
@@ -60,32 +73,62 @@ func printMainMenu() {
 	fmt.Printf("Your choice is: ")
 }
 
-func ShowProductsMenu(p []Product) {
+func ShowProductsMenu() {
 	cmdClear()
-	i := 0
+
+	i := 1
+	var cp int
+	row := db.QueryRow("SELECT count(id) FROM products")  // max
+	err := row.Scan(&cp)
+	if err != nil {
+		log.Fatalf("scan of maxid failed")
+	}
 
 	for {
+		pr := new(Product)
 		var option int
 		fmt.Println("Product: ")
-		fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\nFeatures is %s\n\n", p[i].ID, p[i].Name,
-			p[i].Description, p[i].Price, p[i].SalesPrice, p[i].Features)
+		if err := db.Ping(); err != nil {
+			fmt.Println("no ping")
+		}
+		row := db.QueryRow("SELECT * FROM products WHERE id = $1", i) 
+		err = row.Scan(&pr.ID, &pr.Name, &pr.Description, &pr.Price, &pr.SalesPrice)
+		if err != nil {
+			log.Fatalf("scan from products failed")
+		}
+		rows, err := db.Query("select value from features f inner join product_feature pf on pf.feature_id = f.id and pf.product_id = $1", i) 
+		if err != nil {
+			fmt.Println("select features failed")
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var feature string
+			err = rows.Scan(&feature)
+			if err != nil {
+				log.Fatalf("scan from features failed")
+			}
+			pr.Features = append(pr.Features, feature)
+		}
+		fmt.Printf("ID - %d\nName: %s\nDescription: %s\nPrice: %d\nSales Price: %d\nFeatures: %v\n", pr.ID, pr.Name,
+			pr.Description, pr.Price, pr.SalesPrice, pr.Features)
+
 		printSPMenu()
 
-		_, err := fmt.Scan(&option)
+		_, err = fmt.Scan(&option)
 		if err != nil {
 			fmt.Println(err)
 		}
 		switch option {
 		case 1:
-			EditProductMenu(&p[i])
+			EditProductMenu(pr)
 		case 2:
 			cmdClear()
 			fmt.Println("Next")
-			moveIndex(&i, 1, len(p))
+			moveIndex(&i, 1, cp)
 		case 3:
 			cmdClear()
 			fmt.Println("Previous")
-			moveIndex(&i, -1, len(p))
+			moveIndex(&i, -1, cp)
 		case 4:
 			MainMenu()
 		default:
@@ -104,20 +147,25 @@ func printSPMenu() {
 
 func moveIndex(i *int, n, l int) {
 	*i += n
-	if *i == l {
-		*i = 0
+	if *i == l+1 {
+		*i = 1
 	}
-	if *i < 0 {
-		*i = l - 1
+	if *i < 1 {
+		*i = l
 	}
 }
 
-func EditProductMenu(p *Product) {
+func EditProductMenu(pr *Product) {
 	cmdClear()
 	for {
-		var option int
-		fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\nFeatures is %s\n\n", p.ID, p.Name,
-			p.Description, p.Price, p.SalesPrice, p.Features)
+		var (
+			option     int
+			innerQuery string
+			param      interface{}
+		)
+
+		fmt.Printf("ID - %d\nName: %s\nDescription: %s\nPrice: %d\nSales Price: %d\nFeatures: %v\n", pr.ID, pr.Name,
+			pr.Description, pr.Price, pr.SalesPrice, pr.Features)
 		printEPMenu()
 		_, err := fmt.Scan(&option)
 		if err != nil {
@@ -126,20 +174,33 @@ func EditProductMenu(p *Product) {
 		switch option {
 		case 1:
 			fmt.Println("What is new Name gonna be:")
-			fmt.Scan(&p.Name)
+			fmt.Scan(&pr.Name)
+			innerQuery = "name = $2"
+			param = pr.Name
 		case 2:
 			fmt.Println("What is new Description gonna be:")
-			fmt.Scan(&p.Description)
+			fmt.Scan(&pr.Description)
+			innerQuery = "description = $2"
+			param = pr.Description
 		case 3:
 			fmt.Println("Updated Price is:")
-			fmt.Scan(&p.Price)
+			fmt.Scan(&pr.Price)
+			innerQuery = "price = $2"
+			param = pr.Price
 		case 4:
 			fmt.Println("Is it on Sale? Final Price is:")
-			fmt.Scan(&p.SalesPrice)
+			fmt.Scan(&pr.SalesPrice)
+			innerQuery = "sales_price = $2"
+			param = pr.SalesPrice
 		case 5:
-			ShowProductsMenu(products)
+
+			ShowProductsMenu()
 		default:
 			fmt.Println("Press one of available options!")
+		}
+		query := "update products set " + innerQuery + " where id = $1"
+		if _, err := db.Exec(query, pr.ID, param); err != nil {
+			log.Fatalf("insert statment failed: %v", err)
 		}
 	}
 }
@@ -154,7 +215,7 @@ func printEPMenu() {
 	fmt.Printf("Your choice is: ")
 }
 
-func FilterProductsMenu(p []Product) {
+func FilterProductsMenu() {
 	cmdClear()
 	for {
 		var option string
@@ -169,11 +230,11 @@ func FilterProductsMenu(p []Product) {
 		case 1:
 			cmdClear()
 			fmt.Println("Name")
-			filterByName(p)
+			filterByName()
 		case 2:
 			cmdClear()
 			fmt.Println("Price")
-			filterByPrice(p)
+			filterByPrice()
 		case 3:
 			MainMenu()
 		default:
@@ -190,22 +251,49 @@ func printFPMenu() {
 	fmt.Printf("Your choice is: ")
 }
 
-func filterByName(p []Product) {
+func filterByName() {
+	pr := Product{}
 	var userInput string
 	fmt.Println("Which Name to filter by?")
 	fmt.Scan(&userInput)
+	rows, err := db.Query("select * from products where name = $1", userInput)
+	if err != nil {
+		fmt.Println("select failed")
+	}
+	defer rows.Close()
+	// if err = rows.Err(); err != nil {
+	// 	fmt.Printf("We don't have any item matching %v\n", userInput)
+	// }
+	// if rows == nil {
+	// 	fmt.Printf("We don't have any item matching %v\n", userInput)
+	// }
 
-	for i, val := range p {
-		if userInput == val.Name {
-			fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\nFeatures is %s\n\n", p[i].ID, p[i].Name,
-				p[i].Description, p[i].Price, p[i].SalesPrice, p[i].Features)
-		} else if userInput != val.Name && i == len(p)-1 {
-			fmt.Printf("We don't have any item matching %v\n", userInput)
+	for rows.Next() {
+		// fmt.Println("test")
+		err = rows.Scan(&pr.ID, &pr.Name, &pr.Description, &pr.Price, &pr.SalesPrice)
+		if err != nil {
+			log.Fatalf("scan products failed")
 		}
+		rowsF, err := db.Query("select value from features f inner join product_feature pf on pf.feature_id = f.id and pf.product_id = $1", pr.ID) 
+		if err != nil {
+			fmt.Println("select features failed")
+		}
+		defer rowsF.Close()
+		for rowsF.Next() {
+			var feature string
+			err = rowsF.Scan(&feature)
+			if err != nil {
+				log.Fatalf("scan from features failed")
+			}
+			pr.Features = append(pr.Features, feature)
+		}
+		fmt.Printf("ID - %d\nName: %s\nDescription: %s\nPrice: %d\nSales Price: %d\nFeatures: %v\n", pr.ID, pr.Name,
+			pr.Description, pr.Price, pr.SalesPrice, pr.Features)
 	}
 }
 
-func filterByPrice(p []Product) {
+func filterByPrice() {
+	// pr := Product{}
 	for {
 		var minPrice string
 		var maxPrice string
@@ -216,7 +304,6 @@ func filterByPrice(p []Product) {
 			fmt.Println("Nunbers only")
 			continue
 		}
-
 		fmt.Println("What is the maximum item Price to filter by?")
 		fmt.Scan(&maxPrice)
 		max, err := strconv.Atoi(maxPrice)
@@ -228,11 +315,34 @@ func filterByPrice(p []Product) {
 			fmt.Println("Maximum item price have to be greater, than minimum price")
 			continue
 		}
-		for i, val := range p {
-			if min <= val.Price && val.Price <= max {
-				fmt.Printf("ID-%d\n%s\n%s\nPrice: %d\nSales Price: %d\n%s\n", p[i].ID, p[i].Name,
-					p[i].Description, p[i].Price, p[i].SalesPrice, p[i].Features)
+
+		rows, err := db.Query("select * from products where price between $1 and $2", minPrice, maxPrice)
+		if err != nil {
+			fmt.Println("select failed")
+		}
+		defer rows.Close()
+		for rows.Next() {
+			pr := Product{}
+			err := rows.Scan(&pr.ID, &pr.Name, &pr.Description, &pr.Price, &pr.SalesPrice)
+			if err != nil {
+				log.Fatalf("scan products failed")
 			}
+			rowsF, err := db.Query("select value from features f inner join product_feature pf on pf.feature_id = f.id and pf.product_id = $1", pr.ID) 
+			if err != nil {
+				fmt.Println("select features failed")
+			}
+			defer rowsF.Close()
+			for rowsF.Next() {
+				var feature string
+				err = rowsF.Scan(&feature)
+				if err != nil {
+					log.Fatalf("scan from features failed")
+				}
+				pr.Features = append(pr.Features, feature)   
+				
+			}
+			fmt.Printf("ID - %d\nName: %s\nDescription: %s\nPrice: %d\nSales Price: %d\nFeatures: %v\n", pr.ID, pr.Name,
+				pr.Description, pr.Price, pr.SalesPrice, pr.Features)	
 		}
 		return
 	}
@@ -342,24 +452,14 @@ func uniqueFeature(p []Product) map[string]int {
 }
 
 func main() {
-	content, err := ioutil.ReadFile("stuff.json") // read json file
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = json.Unmarshal(content, &products) // unmarshal decoded json into products
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	MainMenu()
+	var err error
 
 	dbSettings := dbConnection.Settings{
 		User: "postgres",
 		Pass: "Logvynets1",
 		Name: "postgres",
 		Host: "localhost",
-		Port: "5432",
+		Port: "25432",
 	}
 
 	db, err = dbConnection.Connect(dbSettings)
@@ -368,11 +468,13 @@ func main() {
 	}
 	defer db.Close()
 
+	MainMenu()
+
 	// insertProduct(products)
 	// f := uniqueFeature(products)
-	// fmt.Printf("%v\n", f)
+	// // fmt.Printf("%v\n", f)
 	// insertFeature(f)
 	// insertPF(products, f)
-	// fmt.Printf("%v", f)
+	// // fmt.Printf("%v", f)
 
 }
